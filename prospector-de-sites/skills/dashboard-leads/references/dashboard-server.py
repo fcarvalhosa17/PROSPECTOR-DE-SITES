@@ -48,6 +48,9 @@ def conexao():
     c.execute('''CREATE TABLE IF NOT EXISTS acoes(
         id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT, nicho TEXT, cidade TEXT,
         fase INTEGER DEFAULT 1, criado TEXT DEFAULT (datetime('now','localtime')))''')
+    c.execute('''CREATE TABLE IF NOT EXISTS conversas(
+        id INTEGER PRIMARY KEY AUTOINCREMENT, slug TEXT, autor TEXT, texto TEXT,
+        criado TEXT DEFAULT (datetime('now','localtime')))''')
     return c
 
 def importar_snapshot():
@@ -91,6 +94,13 @@ class App(SimpleHTTPRequestHandler):
             c = conexao(); c.row_factory = sqlite3.Row
             rows = [dict(r) for r in c.execute('SELECT * FROM acoes ORDER BY id DESC').fetchall()]; c.close()
             return self._json(200, rows)
+        if self.path.split('?')[0] == '/api/conversas':
+            import urllib.parse
+            qs = urllib.parse.parse_qs(self.path.split('?')[1] if '?' in self.path else '')
+            slug = (qs.get('slug', ['']) or [''])[0]
+            c = conexao(); c.row_factory = sqlite3.Row
+            rows = [dict(r) for r in c.execute('SELECT autor,texto,criado FROM conversas WHERE slug=? ORDER BY id', (slug,)).fetchall()]
+            c.close(); return self._json(200, rows)
         if self.path.split('?')[0] == '/api/leads':
             c = conexao(); c.row_factory = sqlite3.Row
             rows = [dict(r) for r in c.execute('SELECT * FROM leads').fetchall()]; c.close()
@@ -150,9 +160,13 @@ class App(SimpleHTTPRequestHandler):
             return self._json(500, {'erro': str(e)})
         return self._json(200, {'ok': True, 'msg': 'Terminal aberto com o Claude rodando %s — responda lá o que ele perguntar.' % comando.split()[0]})
 
-    def _chat_claude(self, msg):
+    def _salvar_msg(self, slug, autor, texto):
+        c = conexao(); c.execute('INSERT INTO conversas (slug,autor,texto) VALUES (?,?,?)', (slug, autor, texto)); c.commit(); c.close()
+
+    def _chat_claude(self, msg, slug='', rotulo=''):
         """Chat embutido: repassa a mensagem ao Claude Code CLI na pasta conectada.
-        -c continua a conversa anterior; acceptEdits deixa ele editar os sites (servidor é só localhost)."""
+        -c continua a conversa anterior; acceptEdits deixa ele editar os sites (servidor é só localhost).
+        slug agrupa o histórico por cliente (persiste no banco); rotulo é o texto humano exibido."""
         if not msg:
             return self._json(400, {'erro': 'mensagem vazia'})
         if not CLAUDE_BIN:
@@ -167,11 +181,15 @@ class App(SimpleHTTPRequestHandler):
         except subprocess.TimeoutExpired:
             return self._json(500, {'erro': 'o Claude demorou mais de 10 min — para tarefas longas use a vista Ações (terminal)'})
         if r.returncode != 0:
-            return self._json(500, {'erro': ((r.stderr or r.stdout) or 'falha').strip()[-400:]})
+            erro = ((r.stderr or r.stdout) or 'falha').strip()[-400:]
+            self._salvar_msg(slug, 'eu', rotulo or msg); self._salvar_msg(slug, 'claude', 'Falhou: ' + erro)
+            return self._json(500, {'erro': erro})
         try:
             resposta = json.loads(r.stdout).get('result', r.stdout)
         except Exception:
             resposta = r.stdout.strip()
+        self._salvar_msg(slug, 'eu', rotulo or msg)
+        self._salvar_msg(slug, 'claude', resposta)
         return self._json(200, {'ok': True, 'resposta': resposta})
 
     def do_POST(self):
@@ -179,7 +197,8 @@ class App(SimpleHTTPRequestHandler):
         if len(partes) == 4 and partes[1] == 'api' and partes[2] == 'vercel':
             return self._deploy_vercel(partes[3])
         if self.path.split('?')[0] == '/api/chat':
-            return self._chat_claude((self._corpo().get('msg') or '').strip())
+            corpo = self._corpo()
+            return self._chat_claude((corpo.get('msg') or '').strip(), (corpo.get('slug') or '').strip(), corpo.get('rotulo') or '')
         if self.path.split('?')[0] == '/api/acoes':
             a = self._corpo()
             if not (a.get('nome') or '').strip():

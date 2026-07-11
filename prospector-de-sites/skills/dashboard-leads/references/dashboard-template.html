@@ -275,19 +275,18 @@ function vSites(){var ls=fil().filter(function(l){return['redesenhado','publicad
 function promptComparador(){var i=document.getElementById('cmp-prompt'),b=document.getElementById('cmp-btn'),st=document.getElementById('cmp-status');
  var m=i.value.trim();if(!m||b.disabled)return;
  var l=leads.filter(function(x){return x.slug===cmpSel})[0];if(!l)return;
- b.disabled=true;b.textContent='Aplicando…';st.textContent='O Claude está editando a página — aguarde, ela recarrega ao terminar.';
- var msg='No site de '+l.nome+' (arquivo sites/'+l.slug+'/'+l.slug+'.html): '+m+'. Edite o arquivo mantendo a direção de arte, e regenere o '+l.slug+'-editor.html na mesma pasta.';
- chatHist.push({eu:1,txt:'['+l.nome+'] '+m});
- fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({msg:msg})})
+ b.disabled=true;b.textContent='Aplicando…';st.innerHTML='O Claude está editando a página — aguarde, ela recarrega ao terminar.';
+ CONVERSAS[l.slug]=hist(l.slug).concat([{autor:'eu',texto:m}]);var hb=document.getElementById('cmp-hist');if(hb){hb.innerHTML=renderMsgs(hist(l.slug));hb.scrollTop=hb.scrollHeight}
+ var msg=NOREDE+'No site de '+l.nome+' (arquivo sites/'+l.slug+'/'+l.slug+'.html): '+m+'. Edite APENAS esse arquivo local mantendo a direção de arte, e regenere o '+l.slug+'-editor.html na mesma pasta.';
+ fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({msg:msg,slug:l.slug,rotulo:m})})
  .then(function(r){return r.json()}).then(function(j){
   b.disabled=false;b.textContent='Aplicar com Claude';
-  if(j.ok){i.value='';chatHist.push({eu:0,txt:String(j.resposta||'Ajuste aplicado.')});
+  if(j.ok){i.value='';CONVERSAS[l.slug]=hist(l.slug).concat([{autor:'claude',texto:String(j.resposta||'Ajuste aplicado.')}]);var hb2=document.getElementById('cmp-hist');if(hb2){hb2.innerHTML=renderMsgs(hist(l.slug));hb2.scrollTop=hb2.scrollHeight}
    var f=document.getElementById('cmp-nova');f.src='sites/'+l.slug+'/'+l.slug+'.html?v='+Date.now();
-   st.innerHTML='<span style="color:var(--ok);font-weight:700">✓ Ajuste concluído</span> — a página ao lado já recarregou. '+
-    '<button onclick="view=&quot;chat&quot;;render()" style="border:0;border-radius:8px;padding:6px 12px;font-size:12.5px;font-weight:700;cursor:pointer;background:var(--ink);color:#fff;margin-left:6px">Continuar no Chat →</button>'+
-    '<div style="margin-top:8px;color:var(--muted);font-size:12.5px;white-space:pre-wrap">'+String(j.resposta||'').slice(0,400).replace(/</g,'&lt;')+'</div>'}
-  else{chatHist.push({eu:0,txt:'Falhou: '+(j.erro||'')});st.innerHTML='<span style="color:var(--accent-2);font-weight:700">Falhou:</span> '+(j.erro||'')}})
+   st.innerHTML='<span style="color:var(--ok);font-weight:700">✓ Ajuste concluído</span> — a página ao lado já recarregou. Pode pedir o próximo ajuste aqui mesmo.'}
+  else{CONVERSAS[l.slug]=hist(l.slug).concat([{autor:'claude',texto:'Falhou: '+(j.erro||'')}]);var hb3=document.getElementById('cmp-hist');if(hb3)hb3.innerHTML=renderMsgs(hist(l.slug));st.innerHTML='<span style="color:var(--accent-2);font-weight:700">Falhou:</span> '+(j.erro||'')}})
  .catch(function(e){b.disabled=false;b.textContent='Aplicar com Claude';st.textContent='Erro de conexão: '+e})}
+
 function vFollowup(){var fu=fil().filter(function(l){return l.status==='proposta'&&dias(l.dataProposta)>=4});
  return '<div class="painel"><h2>Propostas aguardando follow-up</h2>'+(fu.length?fu.map(card).join(''):'<div class="vazio">Nenhum follow-up pendente.</div>')+'</div>'}
 function abrirContrato(slug,nome){document.getElementById('doc-titulo').textContent='Contrato — '+nome;document.getElementById('doc-frame').src='sites/'+slug+'/contrato-'+slug+'.html';document.getElementById('doc-bg').classList.add('aberto')}
@@ -326,17 +325,27 @@ function salvarHG(){var body={};['usuario','dominio','servidor','pastaBase','sen
  fetch('/api/config',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({hostgator:body})}).then(function(){if(body.senha)HG.senhaDefinida=true;['usuario','dominio','servidor','pastaBase'].forEach(function(k){if(body[k]!==undefined)HG[k]=body[k]});var ok=document.getElementById('hg-ok');ok.style.display='inline';setTimeout(function(){ok.style.display='none';render()},1200)})}
 function ordenar(c){if(c==='x')return;if(sortCol===c)sortAsc=!sortAsc;else{sortCol=c;sortAsc=true}pag=1;render()}
 var cmpSel=null;var HG={};var VC={};
+var cmpMenuAberto=false;
+function filtrarCmp(v){v=(v||'').toLowerCase();var ns=document.querySelectorAll('.cmp-item');for(var k=0;k<ns.length;k++){ns[k].style.display=ns[k].getAttribute('data-nome').indexOf(v)>=0?'':'none'}}
+function escolherCmp(slug){cmpSel=slug;cmpMenuAberto=false;render()}
 function vComparador(){var ls=fil().filter(function(l){return l.slug&&['redesenhado','publicado','proposta','respondeu','fechado'].indexOf(l.status)>=0});
  if(!ls.length)return '<div class="painel"><div class="vazio">Sem sites redesenhados ainda — rode /redesenhar no Claude e o antes/depois aparece aqui.</div></div>';
  if(!cmpSel||!ls.some(function(l){return l.slug===cmpSel}))cmpSel=ls[0].slug;
  var l=ls.filter(function(x){return x.slug===cmpSel})[0];
  var antiga=l.siteAntigo?((l.siteAntigo.indexOf('http')===0?l.siteAntigo:'https://'+l.siteAntigo)):null;
  var nova='sites/'+l.slug+'/'+l.slug+'.html';
- return '<div class="cmp-tabs">'+ls.map(function(x){return '<button class="'+(x.slug===cmpSel?'on':'')+'" onclick="cmpSel=\''+x.slug+'\';render()">'+x.nome+'</button>'}).join('')+'</div>'
+ var itens=ls.map(function(x){return '<button class="cmp-item" data-nome="'+(x.nome||'').toLowerCase().replace(/"/g,'')+'" onclick="escolherCmp(&quot;'+x.slug+'&quot;)" style="display:block;width:100%;text-align:left;border:0;background:'+(x.slug===cmpSel?'var(--accent-soft)':'transparent')+';padding:9px 10px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:var(--ink);font-family:var(--sans)">'+x.nome+'</button>'}).join('');
+ var painelMenu=cmpMenuAberto?'<div style="position:absolute;z-index:30;top:46px;left:0;background:var(--white);border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 30px #00000020;padding:10px;width:340px;max-width:92vw"><input id="cmp-busca" autofocus oninput="filtrarCmp(this.value)" placeholder="Buscar site pelo nome…" style="width:100%;border:1px solid var(--line);border-radius:9px;padding:9px 11px;font-size:13.5px;font-family:var(--sans);background:var(--surface);color:var(--ink)"><div style="max-height:320px;overflow:auto;margin-top:8px">'+itens+'</div></div>':'';
+ var menu='<div style="position:relative;margin-bottom:14px"><button onclick="cmpMenuAberto=!cmpMenuAberto;render()" style="display:inline-flex;align-items:center;gap:10px;border:1px solid var(--line);background:var(--white);padding:10px 16px;border-radius:10px;font-size:13.5px;font-weight:700;cursor:pointer;color:var(--ink);font-family:var(--sans)"><span style="font-size:16px">☰</span> '+l.nome+' <span style="color:var(--muted)">▾</span></button><span style="color:var(--muted);font-size:12px;margin-left:10px">'+ls.length+' site'+(ls.length>1?'s':'')+'</span>'+painelMenu+'</div>';
+ if(MODE==='db'&&CONVERSAS[cmpSel]===undefined){carregarConversa(cmpSel)}
+ var histHtml=(MODE!=='db')?'<div style="color:var(--muted);font-size:12.5px">Abra pelo iniciar-dashboard.bat para conversar e editar.</div>':(CONVERSAS[cmpSel]===undefined?'<div style="color:var(--muted);font-size:12.5px">Carregando conversa…</div>':(hist(cmpSel).length?renderMsgs(hist(cmpSel)):'<div style="color:var(--muted);font-size:12.5px">Nenhum ajuste pedido ainda para esta página. Escreva abaixo o que quer mudar.</div>'));
+ var painelChat=(MODE==='db')?'<div class="painel" style="margin-top:14px"><div style="font-weight:700;font-size:13px;margin-bottom:8px">Conversa sobre esta página</div><div id="cmp-hist" style="max-height:240px;overflow:auto;background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:10px">'+histHtml+'</div><div style="display:flex;gap:8px"><input id="cmp-prompt" style="flex:1;border:1px solid var(--line);border-radius:10px;padding:11px 14px;font-size:13.5px;font-family:var(--sans);background:var(--surface);color:var(--ink)" placeholder="Peça uma mudança nesta página (ex.: deixa o hero mais impactante…)" onkeydown="if(event.key===&quot;Enter&quot;)promptComparador()"><button id="cmp-btn" style="border:0;border-radius:10px;padding:11px 20px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:var(--sans);background:var(--accent);color:#fff" onclick="promptComparador()">Aplicar com Claude</button></div><div id="cmp-status" style="font-size:12.5px;color:var(--muted);margin-top:8px">O Claude edita o arquivo local e a página do lado direito recarrega sozinha (1–3 min). Tarefas que precisam baixar o site vão pela aba Ações.</div></div>':'';
+ return menu
  +'<div class="cmp-grid"><div class="cmp-col"><div class="cab antes">Antes — site atual'+(antiga?' · <a href="'+antiga+'" target="_blank" style="color:inherit">abrir ↗</a>':'')+'</div>'+(antiga?'<iframe src="'+antiga+'" loading="lazy"></iframe>':'<div class="vazio" style="padding:30px">Sem URL do site antigo registrada.</div>')+'</div>'
  +'<div class="cmp-col"><div class="cab depois">Depois — nova versão · <a href="'+nova+'" target="_blank" style="color:inherit">abrir ↗</a></div><iframe id="cmp-nova" src="'+nova+'"></iframe></div></div>'
- +(MODE==='db'?'<div class="painel" style="margin-top:14px"><div style="display:flex;gap:8px"><input id="cmp-prompt" style="flex:1;border:1px solid var(--line);border-radius:10px;padding:11px 14px;font-size:13.5px;font-family:var(--sans);background:var(--surface);color:var(--ink)" placeholder="Peça uma mudança nesta página (ex.: deixa o hero mais impactante, troca a ordem das seções…)" onkeydown="if(event.key===&quot;Enter&quot;)promptComparador()"><button id="cmp-btn" style="border:0;border-radius:10px;padding:11px 20px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:var(--sans);background:var(--accent);color:#fff" onclick="promptComparador()">Aplicar com Claude</button></div><div id="cmp-status" style="font-size:12.5px;color:var(--muted);margin-top:8px">O Claude edita o arquivo e a página do lado direito recarrega sozinha (1–3 min por pedido).</div></div>':'')
+ +painelChat
  +'<div style="font-size:11.5px;color:var(--muted);margin-top:8px">Alguns sites antigos bloqueiam visualização embutida — se o lado "Antes" ficar em branco, use o link "abrir ↗".</div>'}
+
 function subirVercel(slug,el){if(MODE!=='db'){alert('Abra pelo iniciar-dashboard.bat para publicar.');return}
  if(!confirm('Subir este site para o Vercel AGORA? Nada sobe sem este clique.'))return;
  var t=el.textContent;el.textContent='Subindo…';el.style.pointerEvents='none';
@@ -373,19 +382,24 @@ function vAcoes(){if(MODE!=="db")return '<div class="painel vazio">Abra pelo ini
   var sub=[a.nicho,a.cidade].filter(Boolean).join(" · ");
   return '<div class="painel"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px"><b style="font-size:15px">'+a.nome+'</b><a href="#" style="color:var(--muted);text-decoration:none;font-size:12px" onclick="excluirAcao('+a.id+');return false">✕ excluir</a></div>'+(sub?'<div style="color:var(--muted);font-size:12px;margin-bottom:10px">'+sub+"</div>":"")+'<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:12px">'+dots+'</div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'+bts+"</div>"+dica+"</div>"}).join("");
  return '<div style="max-width:860px">'+novo+(cards||'<div class="painel vazio">Nenhuma ação ainda — crie a primeira acima.</div>')+"</div>"}
-var chatHist=[];
-function vChat(){
- var msgs=chatHist.map(function(m){return '<div style="margin:8px 0;display:flex;'+(m.eu?'justify-content:flex-end':'')+'"><div style="max-width:78%;padding:10px 14px;border-radius:12px;font-size:13.5px;line-height:1.55;white-space:pre-wrap;'+(m.eu?'background:var(--accent);color:#fff':'background:var(--white);border:1px solid var(--line)')+'">'+m.txt.replace(/</g,'&lt;')+'</div></div>'}).join('');
- return '<div class="painel" style="display:flex;flex-direction:column;flex:1;min-height:0;margin-bottom:0"><div style="color:var(--muted);font-size:12px;margin-bottom:8px">Converso com o Claude direto nesta pasta — posso editar sites, responder dúvidas e atualizar leads. Para tarefas com navegador (prospectar) ou muitas perguntas, prefira a vista Ações. Respostas podem levar 1-3 min.</div><div id="chat-msgs" style="flex:1;min-height:0;overflow-y:auto;background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:12px">'+(msgs||'<div style="color:var(--muted);font-size:13px;text-align:center;padding:30px">Ex.: "aumenta o título do site da Angelina" · "qual lead está parado há mais tempo?"</div>')+'</div><div style="display:flex;gap:8px;margin-top:10px"><input id="chat-in" style="flex:1;border:1px solid var(--line);border-radius:10px;padding:11px 14px;font-size:13.5px;font-family:var(--sans);background:var(--surface);color:var(--ink)" placeholder="Escreva para o Claude…" onkeydown="if(event.key===&quot;Enter&quot;)enviarChat()"><button id="chat-btn" style="border:0;border-radius:10px;padding:11px 20px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:var(--sans);background:var(--accent);color:#fff" onclick="enviarChat()">Enviar</button></div></div>'}
-function chatSite(nome){view='chat';render();var i=document.getElementById('chat-in');i.value='No site de '+nome+': ';i.focus()}
+var CONVERSAS={};
+var NOREDE='IMPORTANTE: edite apenas arquivos locais desta pasta; NAO acesse a rede (sem curl/WebFetch), pois o chat roda sem interacao e chamadas de rede travam. Se for preciso baixar o site do cliente ou buscar novas imagens, responda dizendo que isso deve ser feito pela aba Acoes (terminal). ';
+function hist(slug){return CONVERSAS[slug]||[]}
+function renderMsgs(arr){return arr.map(function(m){var eu=(m.autor==='eu');return '<div style="margin:8px 0;display:flex;'+(eu?'justify-content:flex-end':'')+'"><div style="max-width:80%;padding:10px 14px;border-radius:12px;font-size:13.5px;line-height:1.55;white-space:pre-wrap;'+(eu?'background:var(--accent);color:#fff':'background:var(--white);border:1px solid var(--line)')+'">'+String(m.texto).replace(/</g,'&lt;')+'</div></div>'}).join('')}
+function carregarConversa(slug,cb){fetch('/api/conversas?slug='+encodeURIComponent(slug),{cache:'no-store'}).then(function(r){return r.json()}).then(function(j){CONVERSAS[slug]=j||[];if(cb)cb();else render()}).catch(function(){if(CONVERSAS[slug]===undefined)CONVERSAS[slug]=[]})}
+function vChat(){if(CONVERSAS['']===undefined){carregarConversa('')}
+ var msgs=renderMsgs(hist(''));
+ return '<div class="painel" style="display:flex;flex-direction:column;flex:1;min-height:0;margin-bottom:0"><div style="color:var(--muted);font-size:12px;margin-bottom:8px">Converso com o Claude direto nesta pasta — edito sites, respondo dúvidas e atualizo leads. Edições são de arquivos locais; tarefas com navegador (prospectar, baixar site) vão pela aba Ações. Respostas levam 1-3 min. O histórico fica salvo.</div><div id="chat-msgs" style="flex:1;min-height:0;overflow-y:auto;background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:12px">'+(msgs||'<div style="color:var(--muted);font-size:13px;text-align:center;padding:30px">Ex.: "aumenta o título do site da Angelina" · "qual lead está parado há mais tempo?"</div>')+'</div><div style="display:flex;gap:8px;margin-top:10px"><input id="chat-in" style="flex:1;border:1px solid var(--line);border-radius:10px;padding:11px 14px;font-size:13.5px;font-family:var(--sans);background:var(--surface);color:var(--ink)" placeholder="Escreva para o Claude…" onkeydown="if(event.key===&quot;Enter&quot;)enviarChat()"><button id="chat-btn" style="border:0;border-radius:10px;padding:11px 20px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:var(--sans);background:var(--accent);color:#fff" onclick="enviarChat()">Enviar</button></div></div>'}
+function chatSite(nome){view='chat';render();var i=document.getElementById('chat-in');if(i){i.value='No site de '+nome+': ';i.focus()}}
 function enviarChat(){if(MODE!=='db'){alert('Abra pelo iniciar-dashboard.bat para usar o chat.');return}
  var i=document.getElementById('chat-in'),b=document.getElementById('chat-btn'),m=i.value.trim();if(!m||b.disabled)return;
- chatHist.push({eu:1,txt:m});chatHist.push({eu:0,txt:'…pensando (pode levar uns minutos)'});render();
- var box=document.getElementById('chat-msgs');box.scrollTop=box.scrollHeight;
- document.getElementById('chat-btn').disabled=true;
- fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({msg:m})})
- .then(function(r){return r.json()}).then(function(j){chatHist.pop();chatHist.push({eu:0,txt:j.ok?j.resposta:('Falhou: '+(j.erro||''))});render();var bx=document.getElementById('chat-msgs');bx.scrollTop=bx.scrollHeight;recarrega()})
- .catch(function(e){chatHist.pop();chatHist.push({eu:0,txt:'Erro de conexão: '+e});render()})}
+ CONVERSAS['']=hist('').concat([{autor:'eu',texto:m},{autor:'claude',texto:'…pensando (pode levar uns minutos)'}]);render();
+ var box=document.getElementById('chat-msgs');if(box)box.scrollTop=box.scrollHeight;
+ var bb=document.getElementById('chat-btn');if(bb)bb.disabled=true;
+ fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({msg:NOREDE+m,slug:'',rotulo:m})})
+ .then(function(r){return r.json()}).then(function(j){var a=hist('');a.pop();a.push({autor:'claude',texto:j.ok?j.resposta:('Falhou: '+(j.erro||''))});CONVERSAS['']=a;render();var bx=document.getElementById('chat-msgs');if(bx)bx.scrollTop=bx.scrollHeight;recarrega()})
+ .catch(function(e){var a=hist('');a.pop();a.push({autor:'claude',texto:'Erro de conexão: '+e});CONVERSAS['']=a;render()})}
+
 function render(){nav();document.getElementById('view').innerHTML={geral:vGeral,acoes:vAcoes,chat:vChat,pipeline:vPipeline,clientes:vClientes,sites:vSites,comparador:vComparador,followup:vFollowup,contratos:vContratos,financeiro:vFinanceiro,config:vConfig}[view]()}
 var dragSlug=null;
 function dragIni(e,slug){dragSlug=slug;e.target.classList.add('arrastando');e.dataTransfer.effectAllowed='move'}
