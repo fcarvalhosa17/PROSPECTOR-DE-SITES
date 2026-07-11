@@ -24,6 +24,8 @@
   .chead a{color:#22d3ee;text-decoration:none;font-weight:600;font-size:12px}
   .chead a:hover{text-decoration:underline}
   iframe{width:100%;height:72vh;border:0;background:#fff;display:block}
+  .shotwrap{height:72vh;overflow-y:auto;background:#fff}
+  .shotwrap img{width:100%;display:block}
   .empty{height:72vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--muted);text-align:center;padding:20px}
   .empty strong{color:var(--old);font-size:17px}
   .hint{color:var(--muted);font-size:12px;margin-top:14px}
@@ -57,8 +59,10 @@ function mostra(c){
   var ol=document.getElementById('oldlink'),nl=document.getElementById('newlink');
   var novo='sites/'+c.slug+'/'+c.slug+'.html';
   nw.innerHTML='<iframe src="'+novo+'"></iframe>';nl.href=novo;
-  if(c.old){ow.innerHTML='<iframe src="'+c.old+'"></iframe>';ol.href=c.old;ol.style.display='inline'}
-  else{ow.innerHTML='<div class="empty"><strong>Sem site para comparar</strong><span>'+(c.motivo||'')+'</span></div>';ol.style.display='none'}
+  if(c.oldshot){ow.innerHTML='<div class="shotwrap"><img src="'+c.oldshot+'" alt="Site original de '+c.nome+'"></div>'}
+  else if(c.old){ow.innerHTML='<iframe src="'+c.old+'"></iframe>'}
+  else{ow.innerHTML='<div class="empty"><strong>Sem site para comparar</strong><span>'+(c.motivo||'')+'</span></div>'}
+  if(c.old){ol.href=c.old;ol.style.display='inline'}else{ol.style.display='none'}
 }
 if(CLIENTES.length)mostra(CLIENTES[0]);
 </script>
@@ -67,8 +71,9 @@ if(CLIENTES.length)mostra(CLIENTES[0]);
 <!--
 FORMATO DO ARRAY __CLIENTES__ (JSON):
 [
-  {"nome":"Nome do Cliente","slug":"slug-do-cliente","old":"https://siteantigo.com.br/"},
+  {"nome":"Nome do Cliente","slug":"slug-do-cliente","old":"https://siteantigo.com.br/","oldshot":"sites/slug-do-cliente/original.png"},
   {"nome":"Cliente Sem Site","slug":"outro-slug","old":null,"motivo":"Site fora do ar"}
 ]
+"oldshot" (recomendado) = screenshot da home original salvo na extração; tem prioridade sobre o iframe (muitos sites bloqueiam incorporação). "old" continua sendo o link "abrir em nova aba".
 Regras: novos clientes ENTRAM no array existente (ler o comparar.html atual e mesclar, nunca sobrescrever perdendo clientes antigos). Slug deve bater com a pasta sites/[slug]/[slug].html.
 -->
