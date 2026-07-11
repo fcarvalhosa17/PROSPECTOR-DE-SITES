@@ -40,22 +40,50 @@ O texto do site novo NUNCA é o texto do site velho colado. Reescreva tudo com t
 - **Microcopy**: legendas sob botões ("resposta em poucos minutos"), rótulos humanos em formulários e seções.
 - Proibido: clichês vazios ("qualidade e compromisso", "excelência no atendimento") sem fato que os sustente; superlativos inventados; promessas de resultado que o cliente não faz.
 
-## Barra de qualidade estrutural (o "profissional de verdade")
+## Barra de qualidade (o teste Awwwards)
 
-A página pronta deve parecer feita por um estúdio de design — teste honesto: colocada ao lado de um template premium do nicho (clínicas/consultórios de alto padrão), ela não pode dever nada. Isso significa: grid consistente (mesmo espaçamento entre TODAS as seções), alinhamento impecável, alternância de ritmo entre seções (fundo claro/escuro/acento, largura cheia/contida), imagens com tratamento coerente (mesmo raio de borda, mesma temperatura), tipografia com no máximo 2 famílias e escala harmônica, e nenhuma seção "órfã" que pareça colada de outro site.
+A página pronta deve passar por trabalho de estúdio que cobra R$ 15-50 mil — teste honesto: submetida ao Awwwards/SOTD, ela não pode parecer feita por IA nem por template. Um designer sênior olhando por 5 segundos precisa pensar "alguém dirigiu isso", não "isso saiu de um gerador". Isso exige duas camadas:
 
-## Padrão estético
+**Rigor estrutural**: grid consistente, alinhamento impecável, alternância de ritmo entre seções (fundo claro/escuro/acento, largura cheia/contida), imagens com tratamento coerente, escala tipográfica harmônica, nenhuma seção "órfã".
 
-- Tipografia: uma serifada elegante para títulos (Playfair Display, Fraunces, Lora) + uma sans limpa para corpo (Inter, Sora, DM Sans), pesos 400/600. Hierarquia forte: h1 ≥ 40px desktop / 30px mobile.
-- Espaçamento generoso: seções com 80-120px de respiro vertical desktop; nada encostado.
-- Paleta: 1 cor da marca + neutros quentes + 1 tom de destaque para CTA. Contraste AA no mínimo.
-- Botão de WhatsApp flutuante fixo no canto inferior direito.
-- Micro-toques premium: bordas 12-16px, sombras suaves, transições de 0.2s em hovers. Sem carrosséis, sem animações pesadas, sem JS além do essencial.
-- Velocidade: página deve abrir instantânea — sem bibliotecas, sem fontes além de 2 famílias.
+**Direção de arte** (a camada que separa 15k de template — seção abaixo). Estrutura correta com estética genérica = entrega reprovada.
+
+## Direção de arte (obrigatória — decidir ANTES de escrever HTML)
+
+Antes de qualquer código, escrever em 3-5 linhas o **conceito** da página: qual sensação o negócio deve transmitir (ex.: advocacia tradicional → peso institucional, serifa editorial, densidade controlada; barbearia → cru, tipografia condensada gigante, contraste duro; clínica estética → etéreo, respiro extremo, fotografia dominante). O conceito nasce do NEGÓCIO real do cliente — nicho, público, cidade, fotos disponíveis — nunca de um padrão fixo. Duas páginas do mesmo lote NUNCA podem ter a mesma cara: variar direção, fontes e composição entre clientes é obrigatório.
+
+### Proibições absolutas (a "cara de IA")
+
+- **Fontes proibidas**: Inter, Roboto, Open Sans, Lato, Montserrat, Poppins, Arial, system fonts — e proibido repetir o mesmo par de fontes em dois clientes do lote. Playfair Display só se o nicho realmente pedir e nunca com Inter.
+- **Layout proibido**: hero centrado com título + parágrafo + botão empilhados no meio; grade de 3 cards idênticos com ícone em cima; seções todas com o mesmo padding simétrico; tudo alinhado ao centro.
+- **Estética proibida**: gradiente roxo/azul sobre branco; sombras suaves idênticas em todos os cards; border-radius uniforme em tudo; fundo 100% chapado em todas as seções; emoji como ícone.
+- **Copy proibida**: "Bem-vindo ao nosso site", títulos de seção literais ("Nossos Serviços", "Sobre Nós", "Contato") — títulos de seção também são copy e devem carregar a voz da página.
+
+### Qualidades exigidas (toda página precisa de pelo menos 5)
+
+1. **Tipografia com caráter**: display font inesperada e adequada ao nicho (explorar o catálogo inteiro do Google Fonts: Fraunces, Libre Caslon, Bricolage Grotesque, Instrument Serif, Unbounded, DM Serif Display, Space Mono como acento…) + corpo refinado. Escala dramática: h1 pode ser 15-20vw se a composição pedir. Peso, largura e itálico usados com intenção.
+2. **Composição que quebra a grade**: assimetria deliberada, sobreposição de elementos (texto sobre foto sangrada, número gigante atrás de card), diagonais, elementos que atravessam limites de seção, hero em layout editorial (tipo revista) em vez de banner centrado.
+3. **Atmosfera de fundo**: nunca só cor chapada — grain/noise sutil (SVG inline), gradiente da paleta do cliente em mesh discreto, padrão geométrico do nicho, textura de papel, vinheta. Sempre derivado da paleta do cliente.
+4. **Motion com propósito**: reveals em scroll (IntersectionObserver, ~10 linhas de JS), stagger na entrada do hero (animation-delay em CSS), hovers que surpreendem (imagem que desloca, sublinhado que desenha, card que inclina levemente). CSS-first, nada de biblioteca.
+5. **Detalhe assinatura**: pelo menos UM elemento memorável e único da página — número de seção tipográfico gigante, marquee com as especialidades, borda desenhada à mão, régua de horários visual, mapa estilizado. O elemento que a pessoa lembra depois de fechar.
+6. **Ritmo espacial intencional**: seções com densidades diferentes — uma comprimida e densa, a próxima com respiro extremo; largura cheia alternando com colunas estreitas; texto vertical ou girado onde couber.
+7. **Fotografia dirigida**: fotos do cliente tratadas como matéria-prima de design — duotone na paleta da marca, recortes inesperados (não só retângulo arredondado), molduras que sangram, sobreposição com tipografia.
+
+### O que continua inegociável (não sacrificar pela estética)
+
+- Contraste AA no texto, CTA do WhatsApp visível sem rolar, botão flutuante do WhatsApp.
+- Paleta = família de cores do CLIENTE (a direção de arte trabalha DENTRO dela — refinar tons, jamais trocar).
+- Máx. 2-3 famílias de fonte (a terceira só como acento mono/display pontual).
+- Velocidade: arquivo único, sem bibliotecas, JS mínimo (só reveals/interações leves), `prefers-reduced-motion` respeitado.
+- Legibilidade mobile: a ousadia da composição desktop degrada com elegância para o empilhamento no celular — nunca vira bagunça.
 
 ## Checklist final (obrigatório antes de entregar)
 
 - [ ] Zero texto placeholder / lorem ipsum
+- [ ] Conceito de direção de arte escrito ANTES do código e refletido na página
+- [ ] Nenhuma proibição da lista "cara de IA" presente (fontes, layout, estética, copy)
+- [ ] Pelo menos 5 das 7 qualidades exigidas presentes e identificáveis
+- [ ] Página visualmente DIFERENTE das outras do lote (fontes e composição distintas)
 - [ ] Todos os links e CTAs apontam para contato REAL do cliente
 - [ ] Número do WhatsApp no formato wa.me correto (55 + DDD + número)
 - [ ] Responsivo verificado em 360, 375, 768, 1024, 1280 e 1440px — zero rolagem horizontal e zero quebra em TODAS
