@@ -77,6 +77,14 @@ Antes de qualquer código, escrever em 3-5 linhas o **conceito** da página: qua
 - Velocidade: arquivo único, sem bibliotecas, JS mínimo (só reveals/interações leves), `prefers-reduced-motion` respeitado.
 - Legibilidade mobile: a ousadia da composição desktop degrada com elegância para o empilhamento no celular — nunca vira bagunça.
 
+## QA visual (obrigatório — nenhuma página é entregue sem ser VISTA)
+
+Checklist de texto não substitui olho. Para cada página gerada, antes de marcar como pronta:
+
+1. Abra o arquivo no Claude in Chrome (`file://`) e tire screenshot em **3 larguras**: 375 (celular), 768 (tablet) e 1440 (desktop).
+2. Julgue cada screenshot contra a barra Awwwards: composição realmente quebra o padrão genérico? Tipografia tem o impacto planejado no conceito? Fotos do cliente carregaram (URL externa pode ter quebrado)? Algum texto vazando, seção quebrada ou contraste ruim?
+3. **Se qualquer coisa falhar, corrija e re-screenshot.** Repita até as 3 larguras passarem. Página que o modelo não viu renderizada é página não entregue.
+
 ## Checklist final (obrigatório antes de entregar)
 
 - [ ] Zero texto placeholder / lorem ipsum
@@ -86,6 +94,7 @@ Antes de qualquer código, escrever em 3-5 linhas o **conceito** da página: qua
 - [ ] Página visualmente DIFERENTE das outras do lote (fontes e composição distintas)
 - [ ] Todos os links e CTAs apontam para contato REAL do cliente
 - [ ] Número do WhatsApp no formato wa.me correto (55 + DDD + número)
+- [ ] QA visual executado: screenshots em 375/768/1440 tirados, julgados e aprovados
 - [ ] Responsivo verificado em 360, 375, 768, 1024, 1280 e 1440px — zero rolagem horizontal e zero quebra em TODAS
 - [ ] Título e meta description preenchidos com nome + especialidade + cidade
 - [ ] Comparação com o original: todo conteúdo importante do site antigo está presente

@@ -34,7 +34,7 @@ Um redesign sem o editor ou sem o comparador é entrega incompleta — o usuári
 
 ## Verificação do lote
 
-Antes de encerrar, para cada página criada: renderize/revise o HTML procurando textos placeholder esquecidos, links quebrados, seções vazias e problemas de contraste. Todos os CTAs devem apontar para o WhatsApp ou contato REAL do cliente.
+Antes de encerrar, para cada página criada: execute o **QA visual da skill** (abrir no Claude in Chrome, screenshots em 375/768/1440, julgar contra a barra Awwwards, corrigir e re-verificar até passar). Além disso, revise o HTML procurando textos placeholder esquecidos, links quebrados, seções vazias e problemas de contraste. Todos os CTAs devem apontar para o WhatsApp ou contato REAL do cliente. Página não vista renderizada = página não entregue.
 
 ## Saída (TRAVADA — siga exatamente este formato)
 
