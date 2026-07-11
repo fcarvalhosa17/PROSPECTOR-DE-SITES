@@ -270,7 +270,7 @@ function vSites(){var ls=fil().filter(function(l){return['redesenhado','publicad
   if(MODE==='db')ic.push('<a href="#" data-nome="'+(l.nome||'').replace(/"/g,'')+'" onclick="chatSite(this.dataset.nome);return false" title="pedir mudança ao Claude no chat">✎ Claude</a>');
   ic.push('<a href="#" onclick="abrirEdit(\''+l.slug+'\');return false">✎ dados</a>');
   ic.push('<a href="#" class="del" onclick="deletar(\''+l.slug+'\');return false">✕</a>');
-  return '<div class="site-card"><div class="prev"><iframe src="'+pg+'" loading="lazy"></iframe></div><div class="info"><div class="s-head"><span class="s-nm">'+l.nome+'</span>'+pillStatus(l.status)+'</div><div class="s-sub">'+[l.nicho,l.cidade,(l.nota?'★ '+l.nota+' ('+l.avaliacoes+')':null)].filter(Boolean).join(' · ')+'</div><div class="s-main">'+prim+'<a class="sec" href="sites/'+l.slug+'/'+l.slug+'-editor.html" target="_blank">Editar site</a>'+vercel+'</div><div class="s-icons">'+ic.join('')+'</div></div></div>'
+  return '<div class="site-card"><div class="prev"><iframe src="'+pg+'" loading="lazy"></iframe></div><div class="info"><div class="s-head"><span class="s-nm">'+l.nome+'</span>'+pillStatus(l.status)+'</div><div class="s-sub">'+[l.nicho,l.cidade,(l.nota?'★ '+l.nota+' ('+l.avaliacoes+')':null)].filter(Boolean).join(' · ')+'</div><div class="s-main">'+prim+vercel+'</div><div class="s-icons">'+ic.join('')+'</div></div></div>'
  }).join('')+'</div>':'<div class="painel vazio">Nenhum site redesenhado ainda — rode /redesenhar.</div>'}
 function promptComparador(){var i=document.getElementById('cmp-prompt'),b=document.getElementById('cmp-btn'),st=document.getElementById('cmp-status');
  var m=i.value.trim();if(!m||b.disabled)return;
