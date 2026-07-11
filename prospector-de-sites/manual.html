@@ -44,6 +44,12 @@
     <a href="#faq">6. Problemas comuns</a>
   </div>
 
+  <div class="box dica" style="border-width:2px"><b>🧭 Esqueceu tudo? Comece aqui:</b><br>
+  1. Dois cliques no atalho <b>"Dashboard Prospector"</b> da área de trabalho (ou <code>iniciar-dashboard.bat</code> na pasta) — abre o painel em <code>localhost:8765</code>.<br>
+  2. Aba <b>Ações ▶</b> = todos os comandos por botão (prospectar, redesenhar, publicar, proposta…). O que faltar de informação, o Claude pergunta no terminal que abrir.<br>
+  3. Quer mudar um site? Aba <b>Sites</b> → botão <b>✎ Claude</b> no card → descreva a mudança no chat.<br>
+  4. Site pronto? Botão <b>▲ Vercel</b> no card publica — <b>nada sobe sem esse clique</b>.</div>
+
   <h2 id="requisitos">1. O que você precisa antes</h2>
   <ul>
     <li><b>Claude Cowork</b> (app do Claude pra desktop) com este plugin instalado.</li>
@@ -91,9 +97,11 @@
   <p>Dê <b>dois cliques em <code>iniciar-dashboard.bat</code></b> na sua pasta (precisa de Python instalado) — abre em <code>http://localhost:8765</code> com tudo salvo no banco <code>prospector.db</code>. Sem Python, abra <code>dashboard.html</code> direto (modo leitura com edições locais).</p>
   <ul>
     <li><b>Visão geral</b> — números do funil e receita.</li>
+    <li><b>Ações ▶</b> — o funil inteiro por botão: Setup, Prospectar (nicho + cidade), Redesenhar, Ajustar um site, Publicar, Proposta, Respostas e Follow-ups. Cada botão abre um terminal com o Claude já executando o comando na sua pasta — o que faltar, ele pergunta lá. (Requer o Claude Code instalado.)</li>
+    <li><b>Chat Claude</b> — converse com o Claude sem sair do painel: "aumenta o título do site da Angelina", "qual lead está parado?". Ele edita os arquivos de verdade e mantém o contexto. Respostas levam 1–3 min; tarefas com navegador (prospectar) rendem mais pela aba Ações.</li>
     <li><b>Pipeline</b> — kanban: arraste o card conforme o cliente avança. Ao soltar em "Fechado", informe o valor — a receita soma na hora.</li>
     <li><b>Clientes</b> — tabela com busca, edição (✎) e exclusão.</li>
-    <li><b>Sites</b> — preview de cada página criada, com botões de abrir/editar.</li>
+    <li><b>Sites</b> — preview de cada página criada. No card: <b>Ver página</b> / <b>Editar site</b> (editor visual) · <b>✎ Claude</b> (abre o chat com o cliente já preenchido — descreva a mudança) · <b>▲ Vercel</b> (deploy manual: o site fica LOCAL até você clicar; pede confirmação, publica e guarda a URL). O Vercel exige, uma única vez no terminal: <code>npm i -g vercel</code> e <code>vercel login</code>.</li>
     <li><b>Comparador</b> — antes/depois lado a lado de cada cliente, dentro do painel.</li>
     <li><b>Follow-ups</b> — quem está parado há dias, com alerta laranja.</li>
     <li><b>Contratos</b> — ver a folha, imprimir, baixar o Word travado, marcar assinado.</li>
@@ -114,6 +122,10 @@
   <p>Alguns sites antigos bloqueiam visualização embutida. Use o link "abrir ↗" no cabeçalho da coluna.</p>
   <h3>O dashboard diz "modo arquivo"</h3>
   <p>Você abriu o <code>dashboard.html</code> direto. Pra salvar no banco, abra pelo <code>iniciar-dashboard.bat</code> (requer Python: <code>python.org/downloads</code>, marque "Add to PATH").</p>
+  <h3>O botão ▲ Vercel diz "Vercel CLI não instalado"</h3>
+  <p>No terminal, uma vez só: <code>npm i -g vercel</code> e depois <code>vercel login</code> (abre o navegador pra autorizar). Daí em diante o botão funciona direto.</p>
+  <h3>O Chat Claude / aba Ações diz que o Claude não foi encontrado</h3>
+  <p>Instale o Claude Code (<code>npm i -g @anthropic-ai/claude-code</code>) ou verifique se o comando <code>claude</code> funciona no terminal. As duas abas precisam do painel aberto pelo <code>iniciar-dashboard.bat</code> (modo banco), não pelo dashboard.html direto.</p>
   <h3>Lead sem e-mail?</h3>
   <p>O plugin descarta e busca outro — proposta vai por e-mail. Pros descartados com WhatsApp, peça o texto adaptado pro zap.</p>
 
