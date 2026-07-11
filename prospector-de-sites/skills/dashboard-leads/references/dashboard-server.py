@@ -27,9 +27,38 @@ def achar_bin(nome):
         if c and os.path.isfile(c): return c
     return None
 
+def achar_ttyd():
+    """ttyd é um .exe único (terminal na web). Procura no PATH, em ~/.local/bin e NA PRÓPRIA PASTA
+    (o jeito mais fácil: o usuário baixa ttyd.win10.exe do GitHub e joga na pasta conectada)."""
+    for nome in ('ttyd', 'ttyd.win10', 'ttyd.win32'):
+        p = achar_bin(nome)
+        if p: return p
+    for nome in ('ttyd.exe', 'ttyd.win10.exe', 'ttyd.win32.exe', 'ttyd'):
+        c = os.path.join(PASTA, nome)
+        if os.path.isfile(c): return c
+    return None
+
 CLAUDE_BIN = achar_bin('claude')
 VERCEL_BIN = achar_bin('vercel')
+TTYD_BIN = achar_ttyd()
+TTYD_PORTA = 7681
+_ttyd_proc = [None]
 PORTA = 8765
+
+def ligar_ttyd():
+    """Sobe o ttyd servindo um cmd na pasta conectada (só localhost). Idempotente."""
+    if not TTYD_BIN: return False
+    if _ttyd_proc[0] and _ttyd_proc[0].poll() is None: return True
+    # abre um cmd que já entra no claude; se o claude fechar, o cmd continua (git, vercel, etc.)
+    alvo = ['cmd', '/k', CLAUDE_BIN] if CLAUDE_BIN else ['cmd']
+    try:
+        _ttyd_proc[0] = subprocess.Popen(
+            [TTYD_BIN, '-p', str(TTYD_PORTA), '-i', '127.0.0.1', '-W', '-t', 'titleFixed=Prospector'] + alvo,
+            cwd=PASTA, stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return True
+    except Exception:
+        return False
 CAMPOS = ['slug','nome','nicho','cidade','nota','avaliacoes','email','telefone','whatsapp',
           'siteAntigo','motivo','status','urlNova','dataProposta','valor','obs',
           'contratoStatus','contratoEm','manutencao','pago','docCliente','endCliente']
@@ -94,6 +123,12 @@ class App(SimpleHTTPRequestHandler):
             c = conexao(); c.row_factory = sqlite3.Row
             rows = [dict(r) for r in c.execute('SELECT * FROM acoes ORDER BY id DESC').fetchall()]; c.close()
             return self._json(200, rows)
+        if self.path.split('?')[0] == '/api/terminal':
+            if not TTYD_BIN:
+                return self._json(200, {'ok': False, 'instalado': False, 'porta': TTYD_PORTA})
+            ligar_ttyd()
+            vivo = bool(_ttyd_proc[0] and _ttyd_proc[0].poll() is None)
+            return self._json(200, {'ok': vivo, 'instalado': True, 'porta': TTYD_PORTA})
         if self.path.split('?')[0] == '/api/conversas':
             import urllib.parse
             qs = urllib.parse.parse_qs(self.path.split('?')[1] if '?' in self.path else '')
@@ -282,6 +317,7 @@ if __name__ == '__main__':
     novo = not os.path.exists(DB)
     conexao().close()
     if novo: importar_snapshot()
+    if TTYD_BIN: ligar_ttyd()  # sobe o terminal web junto, se o ttyd estiver disponível
     print('Prospector rodando em http://localhost:%d  (Ctrl+C para parar)' % PORTA)
     try: webbrowser.open('http://localhost:%d' % PORTA)
     except Exception: pass
