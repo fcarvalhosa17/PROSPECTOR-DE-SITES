@@ -39,19 +39,28 @@ def achar_ttyd():
     return None
 
 NODE_BIN = achar_bin('node')
-
-def ambiente():
-    """Copia do ambiente com o diretório do node no PATH — o vercel.cmd chama `node`, e o
-    .bat aberto por duplo-clique às vezes não tem o node no PATH (erro 'node não reconhecido')."""
-    env = dict(os.environ)
-    if NODE_BIN:
-        d = os.path.dirname(NODE_BIN)
-        if d and d.lower() not in (env.get('PATH', '') or '').lower():
-            env['PATH'] = d + os.pathsep + env.get('PATH', '')
-    return env
-
 CLAUDE_BIN = achar_bin('claude')
 VERCEL_BIN = achar_bin('vercel')
+
+def ambiente():
+    """Copia do ambiente com os diretórios do claude/node/vercel/npm no PATH. O .bat aberto por
+    duplo-clique não herda ~/.local/bin nem o bin do npm, então `claude`/`node`/`vercel` como
+    comando simples davam 'não reconhecido' — tanto no deploy quanto dentro do terminal."""
+    env = dict(os.environ)
+    path = env.get('PATH', '') or ''
+    dirs = []
+    for b in (CLAUDE_BIN, NODE_BIN, VERCEL_BIN):
+        if b:
+            d = os.path.dirname(b)
+            if d and d.lower() not in path.lower() and d not in dirs:
+                dirs.append(d)
+    npm = os.path.join(os.environ.get('APPDATA', ''), 'npm')
+    if os.path.isdir(npm) and npm.lower() not in path.lower() and npm not in dirs:
+        dirs.append(npm)
+    if dirs:
+        env['PATH'] = os.pathsep.join(dirs) + os.pathsep + path
+    return env
+
 TTYD_BIN = achar_ttyd()
 TTYD_PORTA = 7681
 _ttyd_proc = [None]
@@ -62,7 +71,8 @@ def ligar_ttyd():
     if not TTYD_BIN: return False
     if _ttyd_proc[0] and _ttyd_proc[0].poll() is None: return True
     # abre um cmd que já entra no claude; se o claude fechar, o cmd continua (git, vercel, etc.)
-    alvo = ['cmd', '/k', 'echo Abrindo o Claude (pode levar alguns segundos)... & "%s"' % CLAUDE_BIN] if CLAUDE_BIN else ['cmd']
+    # PATH já tem o claude (via ambiente()); echo simples sem parênteses pra não confundir o cmd
+    alvo = ['cmd', '/k', 'echo Abrindo o Claude, aguarde... & claude'] if CLAUDE_BIN else ['cmd']
     try:
         _ttyd_proc[0] = subprocess.Popen(
             [TTYD_BIN, '-p', str(TTYD_PORTA), '-i', '127.0.0.1', '-W', '-t', 'titleFixed=Prospector'] + alvo,
