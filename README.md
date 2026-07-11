@@ -34,5 +34,3 @@ No Claude Cowork (desktop): Configurações → Plugins → Adicionar marketplac
 A senha do cPanel nunca é digitada no chat: você preenche o campo `"senha"` no arquivo `prospector-config.json`, que fica somente no seu computador.
 
 ---
-
-Criado por [Helio Arreche](https://github.com/ArrecheNeto) · Aprenda a usar no meu canal do YouTube
