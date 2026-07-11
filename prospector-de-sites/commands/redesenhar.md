@@ -23,6 +23,10 @@ Redesenhe as páginas dos leads seguindo a skill `redesign-premium`. Ela é obri
    - `sites/[slug]/[pagina].html` — CADA página interna do original ganha sua versão redesenhada (paridade de páginas da skill), com navegação relativa funcionando entre todas
    - `[nome]-editor.html` para CADA página gerada — a mesma página com a camada de edição visual injetada antes de `</body>` (script completo em `references/editor-visual.md` da skill `redesign-premium`). Gere SEMPRE, sem esperar o usuário pedir.
    - `sites/[slug]/original.png` — screenshot da home original (da extração)
+   - `sites/[slug]/cliente.json` — o MANIFESTO do cliente, a memória para ajustes futuros (`/ajustar`). Formato:
+     ```json
+     {"nome":"...","slug":"...","nicho":"...","cidade":"...","whatsapp":"...","conceito":"as 3-5 linhas da direção de arte","fontes":["Display","Corpo"],"paleta":["#...","#..."],"paginas":[{"arquivo":"slug.html","titulo":"Home","origem":"https://siteantigo.com/"}],"fotos":["url1","url2"],"consolidacoes":"páginas do original viradas seção (se houver)","dataRedesign":"AAAA-MM-DD"}
+     ```
 7. **Comparador (OBRIGATÓRIO — não é opcional)**: crie/atualize `comparar.html` na RAIZ da pasta conectada usando o template pronto `references/comparador-template.html` da skill `redesign-premium`: copie o template, substitua `__CLIENTES__` pelo array JSON dos clientes (formato documentado no rodapé do próprio template — inclua `"oldshot": "sites/[slug]/original.png"` para o antes/depois funcionar mesmo quando o site antigo bloqueia iframe). Se `comparar.html` já existir, LEIA o array atual e acrescente os novos clientes no topo — nunca perca os antigos.
 8. **Atualizar** o status do lead em `leads.md` para `redesenhado` e o `dashboard.html` (skill `dashboard-leads`): `status: redesenhado`.
 
@@ -38,6 +42,7 @@ Antes de apresentar qualquer resultado ao usuário, confirme que TODOS estes arq
 - [ ] `sites/[slug]/[pagina].html` para CADA página interna do site original de cada cliente (ou consolidação anotada)
 - [ ] `[nome]-editor.html` para CADA página gerada
 - [ ] `sites/[slug]/original.png` para CADA cliente com site
+- [ ] `sites/[slug]/cliente.json` (manifesto) para CADA cliente
 - [ ] `comparar.html` na raiz, com abas para TODOS os clientes do lote (com `oldshot`)
 - [ ] Veredito APROVADO do revisor independente para CADA cliente
 
