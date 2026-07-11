@@ -62,7 +62,7 @@ def ligar_ttyd():
     if not TTYD_BIN: return False
     if _ttyd_proc[0] and _ttyd_proc[0].poll() is None: return True
     # abre um cmd que já entra no claude; se o claude fechar, o cmd continua (git, vercel, etc.)
-    alvo = ['cmd', '/k', CLAUDE_BIN] if CLAUDE_BIN else ['cmd']
+    alvo = ['cmd', '/k', 'echo Abrindo o Claude (pode levar alguns segundos)... & "%s"' % CLAUDE_BIN] if CLAUDE_BIN else ['cmd']
     try:
         _ttyd_proc[0] = subprocess.Popen(
             [TTYD_BIN, '-p', str(TTYD_PORTA), '-i', '127.0.0.1', '-W', '-t', 'titleFixed=Prospector'] + alvo,
@@ -250,6 +250,13 @@ class App(SimpleHTTPRequestHandler):
         if self.path.split('?')[0] == '/api/chat':
             corpo = self._corpo()
             return self._chat_claude((corpo.get('msg') or '').strip(), (corpo.get('slug') or '').strip(), corpo.get('rotulo') or '')
+        if self.path.split('?')[0] == '/api/conversas':
+            corpo = self._corpo()
+            texto = (corpo.get('texto') or '').strip()
+            if not texto:
+                return self._json(400, {'erro': 'texto vazio'})
+            self._salvar_msg((corpo.get('slug') or '').strip(), corpo.get('autor') or 'eu', texto)
+            return self._json(200, {'ok': True})
         if self.path.split('?')[0] == '/api/acoes':
             a = self._corpo()
             if not (a.get('nome') or '').strip():
