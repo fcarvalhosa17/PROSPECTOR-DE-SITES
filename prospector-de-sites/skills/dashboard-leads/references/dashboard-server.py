@@ -171,15 +171,19 @@ class App(SimpleHTTPRequestHandler):
             return self._json(400, {'erro': 'mensagem vazia'})
         if not CLAUDE_BIN:
             return self._json(500, {'erro': 'Claude Code não encontrado. Instale/verifique: claude no terminal (ou ~/.local/bin/claude)'})
-        base = [CLAUDE_BIN, '-p', '--permission-mode', 'acceptEdits', '--output-format', 'json']
+        # allowedTools = só ferramentas de arquivo local. Em -p, ferramenta fora da lista é NEGADA
+        # na hora (não abre prompt), então o processo nunca trava esperando aprovação de rede/bash.
+        ferramentas = 'Read,Edit,Write,MultiEdit,Glob,Grep,LS'
+        base = [CLAUDE_BIN, '-p', '--permission-mode', 'acceptEdits',
+                '--allowedTools', ferramentas, '--output-format', 'json']
         try:
-            r = subprocess.run(base + ['-c', msg], shell=False, cwd=PASTA,
-                               capture_output=True, text=True, timeout=600, encoding='utf-8', errors='replace')
+            r = subprocess.run(base + ['-c', msg], shell=False, cwd=PASTA, stdin=subprocess.DEVNULL,
+                               capture_output=True, text=True, timeout=300, encoding='utf-8', errors='replace')
             if r.returncode != 0:  # primeira mensagem: ainda não existe conversa para continuar
-                r = subprocess.run(base + [msg], shell=False, cwd=PASTA,
-                                   capture_output=True, text=True, timeout=600, encoding='utf-8', errors='replace')
+                r = subprocess.run(base + [msg], shell=False, cwd=PASTA, stdin=subprocess.DEVNULL,
+                                   capture_output=True, text=True, timeout=300, encoding='utf-8', errors='replace')
         except subprocess.TimeoutExpired:
-            return self._json(500, {'erro': 'o Claude demorou mais de 10 min — para tarefas longas use a vista Ações (terminal)'})
+            return self._json(500, {'erro': 'o Claude passou de 5 min — provável tarefa que precisa de rede/terminal. Use a aba Ações (terminal) para esse tipo de pedido.'})
         if r.returncode != 0:
             erro = ((r.stderr or r.stdout) or 'falha').strip()[-400:]
             self._salvar_msg(slug, 'eu', rotulo or msg); self._salvar_msg(slug, 'claude', 'Falhou: ' + erro)
