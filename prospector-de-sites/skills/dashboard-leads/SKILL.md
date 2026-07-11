@@ -51,6 +51,14 @@ EOF
 
 Se o banco não existir ainda (usuário antigo), crie-o e importe os leads do snapshot embutido no `dashboard.html` atual antes do upsert. Respeite edições do usuário: antes de regravar um lead, leia o registro atual do banco.
 
+## Ações, Chat e Vercel (modo banco apenas)
+
+Com o servidor rodando, o painel também opera o funil inteiro:
+
+- **Vista Ações**: botões que abrem um terminal com o Claude Code já executando o comando (`/setup`, `/prospectar`, `/redesenhar`, `/ajustar`, `/publicar`, `/proposta`, `/respostas`, `/followup`) na pasta conectada — informação que faltar, o Claude pergunta no terminal. Requer `claude` no PATH.
+- **Vista Chat Claude**: chat embutido (`POST /api/chat`) que fala com o Claude Code CLI (`claude -p -c`, permissão acceptEdits, servidor só em localhost) — bom para ajustes de site e perguntas; tarefas com navegador vão pela vista Ações.
+- **Botão ▲ Vercel** (card do site, vista Sites): deploy MANUAL — `POST /api/vercel/[slug]` copia `[slug].html` → `index.html`, gera `.vercelignore` (editor/manifesto/screenshot ficam de fora) e roda `vercel deploy --prod --yes`; ao concluir grava `urlNova` e status `publicado`. NUNCA publicar automaticamente — só quando o usuário clica. Requer `npm i -g vercel` + `vercel login` (uma vez).
+
 ## O que o painel faz sozinho (não reimplementar)
 
 Kanban drag & drop, edição em modal, exclusão, busca, paginação automática, funil, follow-ups (proposta 4+ dias), receita fechada/potencial, vista Contratos (status pendente/enviado/assinado + link do documento + pago) e vista Financeiro (recebido, a receber, MRR de manutenções, projeção 12 meses) — tudo no template. O plugin só mantém o BANCO correto e o snapshot em dia.

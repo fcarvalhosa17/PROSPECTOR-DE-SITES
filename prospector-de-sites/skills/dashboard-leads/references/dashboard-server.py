@@ -3,7 +3,7 @@
 """Prospector — servidor local do dashboard (SQLite). Sem dependências: só Python padrão.
 Uso: python dashboard-server.py  (ou duplo clique em iniciar-dashboard.bat)
 Abre em http://localhost:8765 — edições, exclusões e drag&drop salvam no prospector.db"""
-import json, sqlite3, os, sys, webbrowser
+import json, sqlite3, os, sys, webbrowser, subprocess, shutil
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
 PASTA = os.path.dirname(os.path.abspath(__file__))
@@ -73,7 +73,86 @@ class App(SimpleHTTPRequestHandler):
         if self.path in ('/', ''):
             self.path = '/dashboard.html'
         return SimpleHTTPRequestHandler.do_GET(self)
+    def _deploy_vercel(self, slug):
+        """Deploy MANUAL de um site no Vercel — só roda quando o usuário clica no botão."""
+        if not slug.replace('-', '').replace('_', '').isalnum():
+            return self._json(400, {'erro': 'slug inválido'})
+        pasta = os.path.join(PASTA, 'sites', slug)
+        pagina = os.path.join(pasta, slug + '.html')
+        if not os.path.isfile(pagina):
+            return self._json(404, {'erro': 'não achei sites/%s/%s.html' % (slug, slug)})
+        if not shutil.which('vercel'):
+            return self._json(500, {'erro': 'Vercel CLI não instalado. No terminal: npm i -g vercel && vercel login'})
+        shutil.copyfile(pagina, os.path.join(pasta, 'index.html'))
+        with open(os.path.join(pasta, '.vercelignore'), 'w') as f:
+            f.write('*-editor.html\noriginal.png\ncliente.json\n%s.html\n' % slug)
+        try:
+            r = subprocess.run('vercel deploy --prod --yes', shell=True, cwd=pasta,
+                               capture_output=True, text=True, timeout=300)
+        except subprocess.TimeoutExpired:
+            return self._json(500, {'erro': 'deploy passou de 5 minutos — tente pelo terminal: vercel deploy --prod'})
+        if r.returncode != 0:
+            return self._json(500, {'erro': ((r.stderr or r.stdout) or 'falha desconhecida').strip()[-400:]})
+        url = ''
+        for linha in reversed((r.stdout or '').strip().splitlines()):
+            if 'http' in linha:
+                url = linha.strip().split()[-1]; break
+        c = conexao()
+        c.execute('''UPDATE leads SET urlNova=?, status=CASE WHEN status IN ('novo','redesenhado') THEN 'publicado' ELSE status END,
+                     atualizado=datetime('now','localtime') WHERE slug=?''', (url, slug))
+        c.commit(); c.close()
+        return self._json(200, {'ok': True, 'url': url})
+
+    def _rodar_claude(self, comando):
+        """Abre um terminal com o Claude Code já executando o comando na pasta conectada.
+        O Claude pergunta no terminal o que faltar — o dashboard só dispara."""
+        if not comando.startswith('/'):
+            return self._json(400, {'erro': 'comando deve começar com /'})
+        if not shutil.which('claude'):
+            return self._json(500, {'erro': 'Claude Code CLI não encontrado no PATH'})
+        try:
+            if os.name == 'nt':
+                subprocess.Popen('start "Prospector — %s" cmd /k claude "%s"' % (comando.split()[0], comando.replace('"', '')),
+                                 shell=True, cwd=PASTA)
+            else:
+                subprocess.Popen(['x-terminal-emulator', '-e', 'claude', comando], cwd=PASTA)
+        except Exception as e:
+            return self._json(500, {'erro': str(e)})
+        return self._json(200, {'ok': True, 'msg': 'Terminal aberto com o Claude rodando %s — responda lá o que ele perguntar.' % comando.split()[0]})
+
+    def _chat_claude(self, msg):
+        """Chat embutido: repassa a mensagem ao Claude Code CLI na pasta conectada.
+        -c continua a conversa anterior; acceptEdits deixa ele editar os sites (servidor é só localhost)."""
+        if not msg:
+            return self._json(400, {'erro': 'mensagem vazia'})
+        if not shutil.which('claude'):
+            return self._json(500, {'erro': 'Claude Code CLI não encontrado no PATH'})
+        base = 'claude -p --permission-mode acceptEdits --output-format json'
+        msg_arg = '"%s"' % msg.replace('"', "'")
+        try:
+            r = subprocess.run('%s -c %s' % (base, msg_arg), shell=True, cwd=PASTA,
+                               capture_output=True, text=True, timeout=600, encoding='utf-8', errors='replace')
+            if r.returncode != 0:  # primeira mensagem: ainda não existe conversa para continuar
+                r = subprocess.run('%s %s' % (base, msg_arg), shell=True, cwd=PASTA,
+                                   capture_output=True, text=True, timeout=600, encoding='utf-8', errors='replace')
+        except subprocess.TimeoutExpired:
+            return self._json(500, {'erro': 'o Claude demorou mais de 10 min — para tarefas longas use a vista Ações (terminal)'})
+        if r.returncode != 0:
+            return self._json(500, {'erro': ((r.stderr or r.stdout) or 'falha').strip()[-400:]})
+        try:
+            resposta = json.loads(r.stdout).get('result', r.stdout)
+        except Exception:
+            resposta = r.stdout.strip()
+        return self._json(200, {'ok': True, 'resposta': resposta})
+
     def do_POST(self):
+        partes = self.path.split('?')[0].split('/')
+        if len(partes) == 4 and partes[1] == 'api' and partes[2] == 'vercel':
+            return self._deploy_vercel(partes[3])
+        if self.path.split('?')[0] == '/api/chat':
+            return self._chat_claude((self._corpo().get('msg') or '').strip())
+        if self.path.split('?')[0] == '/api/claude':
+            return self._rodar_claude((self._corpo().get('comando') or '').strip())
         if self.path.split('?')[0] == '/api/leads':
             l = self._corpo(); c = conexao()
             c.execute('INSERT OR REPLACE INTO leads (%s) VALUES (%s)' % (','.join(CAMPOS), ','.join('?'*len(CAMPOS))),
