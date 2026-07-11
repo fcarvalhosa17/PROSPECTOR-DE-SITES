@@ -277,11 +277,16 @@ function promptComparador(){var i=document.getElementById('cmp-prompt'),b=docume
  var l=leads.filter(function(x){return x.slug===cmpSel})[0];if(!l)return;
  b.disabled=true;b.textContent='Aplicando…';st.textContent='O Claude está editando a página — aguarde, ela recarrega ao terminar.';
  var msg='No site de '+l.nome+' (arquivo sites/'+l.slug+'/'+l.slug+'.html): '+m+'. Edite o arquivo mantendo a direção de arte, e regenere o '+l.slug+'-editor.html na mesma pasta.';
+ chatHist.push({eu:1,txt:'['+l.nome+'] '+m});
  fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({msg:msg})})
  .then(function(r){return r.json()}).then(function(j){
   b.disabled=false;b.textContent='Aplicar com Claude';
-  if(j.ok){i.value='';st.textContent='Pronto: '+String(j.resposta||'').slice(0,300);var f=document.getElementById('cmp-nova');f.src='sites/'+l.slug+'/'+l.slug+'.html?v='+Date.now()}
-  else{st.textContent='Falhou: '+(j.erro||'')}})
+  if(j.ok){i.value='';chatHist.push({eu:0,txt:String(j.resposta||'Ajuste aplicado.')});
+   var f=document.getElementById('cmp-nova');f.src='sites/'+l.slug+'/'+l.slug+'.html?v='+Date.now();
+   st.innerHTML='<span style="color:var(--ok);font-weight:700">✓ Ajuste concluído</span> — a página ao lado já recarregou. '+
+    '<button onclick="view=&quot;chat&quot;;render()" style="border:0;border-radius:8px;padding:6px 12px;font-size:12.5px;font-weight:700;cursor:pointer;background:var(--ink);color:#fff;margin-left:6px">Continuar no Chat →</button>'+
+    '<div style="margin-top:8px;color:var(--muted);font-size:12.5px;white-space:pre-wrap">'+String(j.resposta||'').slice(0,400).replace(/</g,'&lt;')+'</div>'}
+  else{chatHist.push({eu:0,txt:'Falhou: '+(j.erro||'')});st.innerHTML='<span style="color:var(--accent-2);font-weight:700">Falhou:</span> '+(j.erro||'')}})
  .catch(function(e){b.disabled=false;b.textContent='Aplicar com Claude';st.textContent='Erro de conexão: '+e})}
 function vFollowup(){var fu=fil().filter(function(l){return l.status==='proposta'&&dias(l.dataProposta)>=4});
  return '<div class="painel"><h2>Propostas aguardando follow-up</h2>'+(fu.length?fu.map(card).join(''):'<div class="vazio">Nenhum follow-up pendente.</div>')+'</div>'}
