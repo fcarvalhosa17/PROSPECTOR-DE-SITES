@@ -30,6 +30,9 @@ def conexao():
     for col, tipo in [('contratoStatus',"TEXT DEFAULT 'pendente'"),('contratoEm','TEXT'),('manutencao','REAL'),('pago','INTEGER DEFAULT 0'),('docCliente','TEXT'),('endCliente','TEXT')]:
         try: c.execute('ALTER TABLE leads ADD COLUMN %s %s' % (col, tipo))
         except sqlite3.OperationalError: pass
+    c.execute('''CREATE TABLE IF NOT EXISTS acoes(
+        id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT, nicho TEXT, cidade TEXT,
+        fase INTEGER DEFAULT 1, criado TEXT DEFAULT (datetime('now','localtime')))''')
     return c
 
 def importar_snapshot():
@@ -65,7 +68,14 @@ class App(SimpleHTTPRequestHandler):
             hg = dict(cfg.get('hostgator', {}))
             hg['senhaDefinida'] = bool(hg.get('senha'))
             hg.pop('senha', None)  # a senha NUNCA sai do arquivo
-            return self._json(200, {'contratante': cfg.get('contratante', {}), 'hostgator': hg})
+            vc = dict(cfg.get('vercel', {}))
+            vc['tokenDefinido'] = bool(vc.get('token'))
+            vc.pop('token', None)  # o token NUNCA sai do arquivo
+            return self._json(200, {'contratante': cfg.get('contratante', {}), 'hostgator': hg, 'vercel': vc})
+        if self.path.split('?')[0] == '/api/acoes':
+            c = conexao(); c.row_factory = sqlite3.Row
+            rows = [dict(r) for r in c.execute('SELECT * FROM acoes ORDER BY id DESC').fetchall()]; c.close()
+            return self._json(200, rows)
         if self.path.split('?')[0] == '/api/leads':
             c = conexao(); c.row_factory = sqlite3.Row
             rows = [dict(r) for r in c.execute('SELECT * FROM leads').fetchall()]; c.close()
@@ -82,12 +92,16 @@ class App(SimpleHTTPRequestHandler):
         if not os.path.isfile(pagina):
             return self._json(404, {'erro': 'não achei sites/%s/%s.html' % (slug, slug)})
         if not shutil.which('vercel'):
-            return self._json(500, {'erro': 'Vercel CLI não instalado. No terminal: npm i -g vercel && vercel login'})
+            return self._json(500, {'erro': 'Vercel CLI não instalado. No terminal: npm i -g vercel (o token você salva na aba Configurações)'})
+        vc = ler_config().get('vercel', {})
+        extra = ''
+        if vc.get('token'): extra += ' --token %s' % vc['token']
+        if vc.get('escopo'): extra += ' --scope %s' % vc['escopo']
         shutil.copyfile(pagina, os.path.join(pasta, 'index.html'))
         with open(os.path.join(pasta, '.vercelignore'), 'w') as f:
             f.write('*-editor.html\noriginal.png\ncliente.json\n%s.html\n' % slug)
         try:
-            r = subprocess.run('vercel deploy --prod --yes', shell=True, cwd=pasta,
+            r = subprocess.run('vercel deploy --prod --yes' + extra, shell=True, cwd=pasta,
                                capture_output=True, text=True, timeout=300)
         except subprocess.TimeoutExpired:
             return self._json(500, {'erro': 'deploy passou de 5 minutos — tente pelo terminal: vercel deploy --prod'})
@@ -151,6 +165,14 @@ class App(SimpleHTTPRequestHandler):
             return self._deploy_vercel(partes[3])
         if self.path.split('?')[0] == '/api/chat':
             return self._chat_claude((self._corpo().get('msg') or '').strip())
+        if self.path.split('?')[0] == '/api/acoes':
+            a = self._corpo()
+            if not (a.get('nome') or '').strip():
+                return self._json(400, {'erro': 'nome obrigatório'})
+            c = conexao()
+            c.execute('INSERT INTO acoes (nome,nicho,cidade) VALUES (?,?,?)',
+                      (a['nome'].strip(), (a.get('nicho') or '').strip(), (a.get('cidade') or '').strip()))
+            c.commit(); c.close(); return self._json(200, {'ok': True})
         if self.path.split('?')[0] == '/api/claude':
             return self._rodar_claude((self._corpo().get('comando') or '').strip())
         if self.path.split('?')[0] == '/api/leads':
@@ -162,6 +184,15 @@ class App(SimpleHTTPRequestHandler):
     def do_PUT(self):
         if self.path.split('?')[0] == '/api/config':
             cfg = ler_config(); corpo = self._corpo()
+            if 'vercel' in corpo:
+                vc = cfg.get('vercel', {})
+                for k, v in corpo['vercel'].items():
+                    if not isinstance(v, str): continue
+                    if k == 'token' and v == '': continue  # em branco = mantém o atual
+                    vc[k] = v
+                cfg['vercel'] = vc
+                json.dump(cfg, open(CONFIG, 'w', encoding='utf-8'), ensure_ascii=False, indent=2)
+                return self._json(200, {'ok': True})
             if 'contratante' in corpo or 'hostgator' in corpo:
                 if 'contratante' in corpo:
                     ct = cfg.get('contratante', {})
@@ -181,6 +212,13 @@ class App(SimpleHTTPRequestHandler):
             json.dump(cfg, open(CONFIG, 'w', encoding='utf-8'), ensure_ascii=False, indent=2)
             return self._json(200, {'ok': True})
         partes = self.path.split('?')[0].split('/')
+        if len(partes) == 4 and partes[1] == 'api' and partes[2] == 'acoes':
+            ch = self._corpo()
+            if 'fase' in ch:
+                c = conexao()
+                c.execute('UPDATE acoes SET fase=? WHERE id=?', (int(ch['fase']), int(partes[3])))
+                c.commit(); c.close()
+            return self._json(200, {'ok': True})
         if len(partes) == 4 and partes[1] == 'api' and partes[2] == 'leads':
             slug, ch = partes[3], self._corpo()
             sets = [k for k in ch if k in CAMPOS and k != 'slug']
@@ -193,6 +231,9 @@ class App(SimpleHTTPRequestHandler):
         return self._json(404, {'erro': 'rota'})
     def do_DELETE(self):
         partes = self.path.split('?')[0].split('/')
+        if len(partes) == 4 and partes[1] == 'api' and partes[2] == 'acoes':
+            c = conexao(); c.execute('DELETE FROM acoes WHERE id=?', (int(partes[3]),)); c.commit(); c.close()
+            return self._json(200, {'ok': True})
         if len(partes) == 4 and partes[1] == 'api' and partes[2] == 'leads':
             c = conexao(); c.execute('DELETE FROM leads WHERE slug=?', (partes[3],)); c.commit(); c.close()
             return self._json(200, {'ok': True})

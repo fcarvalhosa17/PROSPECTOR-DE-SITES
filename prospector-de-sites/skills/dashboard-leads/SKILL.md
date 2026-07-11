@@ -55,7 +55,9 @@ Se o banco não existir ainda (usuário antigo), crie-o e importe os leads do sn
 
 Com o servidor rodando, o painel também opera o funil inteiro:
 
-- **Vista Ações**: botões que abrem um terminal com o Claude Code já executando o comando (`/setup`, `/prospectar`, `/redesenhar`, `/ajustar`, `/publicar`, `/proposta`, `/respostas`, `/followup`) na pasta conectada — informação que faltar, o Claude pergunta no terminal. Requer `claude` no PATH.
+- **Vista Ações**: campanhas SEQUENCIAIS (tabela `acoes` no banco; rotas `/api/acoes` GET/POST/PUT/DELETE). Cada ação nasce na fase 1 e segue na ordem, sem pular: Setup → Prospectar → Redesenhar → Publicar → Proposta → Acompanhar. Várias ações podem correr em paralelo. "Executar fase" abre um terminal com o Claude rodando o comando da fase (com nicho/cidade da ação no /prospectar); "Fase feita ✓" avança. Requer `claude` no PATH.
+- **Prompt no Comparador**: abaixo do antes/depois há um campo de prompt — o pedido vai pro `/api/chat` com o arquivo do site no contexto e o iframe "Depois" recarrega ao terminar (edição visual iterativa).
+- **Config Vercel**: aba Configurações guarda `vercel: {token, escopo}` no `prospector-config.json` (o token nunca sai do arquivo, igual à senha HostGator); o deploy do botão ▲ Vercel usa `--token`/`--scope` automaticamente — sem `vercel login`.
 - **Vista Chat Claude**: chat embutido (`POST /api/chat`) que fala com o Claude Code CLI (`claude -p -c`, permissão acceptEdits, servidor só em localhost) — bom para ajustes de site e perguntas; tarefas com navegador vão pela vista Ações.
 - **Botão ▲ Vercel** (card do site, vista Sites): deploy MANUAL — `POST /api/vercel/[slug]` copia `[slug].html` → `index.html`, gera `.vercelignore` (editor/manifesto/screenshot ficam de fora) e roda `vercel deploy --prod --yes`; ao concluir grava `urlNova` e status `publicado`. NUNCA publicar automaticamente — só quando o usuário clica. Requer `npm i -g vercel` + `vercel login` (uma vez).
 
