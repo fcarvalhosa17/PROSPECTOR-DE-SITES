@@ -38,6 +38,18 @@ def achar_ttyd():
         if os.path.isfile(c): return c
     return None
 
+NODE_BIN = achar_bin('node')
+
+def ambiente():
+    """Copia do ambiente com o diretório do node no PATH — o vercel.cmd chama `node`, e o
+    .bat aberto por duplo-clique às vezes não tem o node no PATH (erro 'node não reconhecido')."""
+    env = dict(os.environ)
+    if NODE_BIN:
+        d = os.path.dirname(NODE_BIN)
+        if d and d.lower() not in (env.get('PATH', '') or '').lower():
+            env['PATH'] = d + os.pathsep + env.get('PATH', '')
+    return env
+
 CLAUDE_BIN = achar_bin('claude')
 VERCEL_BIN = achar_bin('vercel')
 TTYD_BIN = achar_ttyd()
@@ -54,7 +66,7 @@ def ligar_ttyd():
     try:
         _ttyd_proc[0] = subprocess.Popen(
             [TTYD_BIN, '-p', str(TTYD_PORTA), '-i', '127.0.0.1', '-W', '-t', 'titleFixed=Prospector'] + alvo,
-            cwd=PASTA, stdin=subprocess.DEVNULL,
+            cwd=PASTA, stdin=subprocess.DEVNULL, env=ambiente(),
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         return True
     except Exception:
@@ -161,7 +173,7 @@ class App(SimpleHTTPRequestHandler):
         with open(os.path.join(pasta, '.vercelignore'), 'w') as f:
             f.write('*-editor.html\noriginal.png\ncliente.json\n%s.html\n' % slug)
         try:
-            r = subprocess.run(cmd, shell=False, cwd=pasta,
+            r = subprocess.run(cmd, shell=False, cwd=pasta, env=ambiente(),
                                capture_output=True, text=True, timeout=300)
         except subprocess.TimeoutExpired:
             return self._json(500, {'erro': 'deploy passou de 5 minutos — tente pelo terminal: vercel deploy --prod'})
@@ -188,9 +200,9 @@ class App(SimpleHTTPRequestHandler):
             if os.name == 'nt':
                 # /k mantém a janela; caminho absoluto do claude entre aspas para vencer PATH e espaços
                 subprocess.Popen('start "Prospector — %s" cmd /k ""%s" "%s""' % (comando.split()[0], CLAUDE_BIN, comando.replace('"', '')),
-                                 shell=True, cwd=PASTA)
+                                 shell=True, cwd=PASTA, env=ambiente())
             else:
-                subprocess.Popen(['x-terminal-emulator', '-e', CLAUDE_BIN, comando], cwd=PASTA)
+                subprocess.Popen(['x-terminal-emulator', '-e', CLAUDE_BIN, comando], cwd=PASTA, env=ambiente())
         except Exception as e:
             return self._json(500, {'erro': str(e)})
         return self._json(200, {'ok': True, 'msg': 'Terminal aberto com o Claude rodando %s — responda lá o que ele perguntar.' % comando.split()[0]})
