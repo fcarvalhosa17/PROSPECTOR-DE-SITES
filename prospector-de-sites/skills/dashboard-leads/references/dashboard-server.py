@@ -14,6 +14,21 @@ CONFIG = os.path.join(PASTA, 'prospector-config.json')
 def ler_config():
     try: return json.load(open(CONFIG, encoding='utf-8'))
     except Exception: return {}
+
+def achar_bin(nome):
+    """Caminho absoluto do executável (claude/vercel/npm...). O PATH do .bat aberto por
+    duplo-clique às vezes não inclui ~/.local/bin nem o bin global do npm — por isso o fallback."""
+    p = shutil.which(nome)
+    if p: return p
+    home = os.path.expanduser('~')
+    cands = [os.path.join(home, '.local', 'bin', nome + ext) for ext in ('.exe', '.cmd', '')]
+    cands += [os.path.join(os.environ.get('APPDATA', ''), 'npm', nome + ext) for ext in ('.cmd', '.exe', '')]
+    for c in cands:
+        if c and os.path.isfile(c): return c
+    return None
+
+CLAUDE_BIN = achar_bin('claude')
+VERCEL_BIN = achar_bin('vercel')
 PORTA = 8765
 CAMPOS = ['slug','nome','nicho','cidade','nota','avaliacoes','email','telefone','whatsapp',
           'siteAntigo','motivo','status','urlNova','dataProposta','valor','obs',
@@ -91,17 +106,17 @@ class App(SimpleHTTPRequestHandler):
         pagina = os.path.join(pasta, slug + '.html')
         if not os.path.isfile(pagina):
             return self._json(404, {'erro': 'não achei sites/%s/%s.html' % (slug, slug)})
-        if not shutil.which('vercel'):
+        if not VERCEL_BIN:
             return self._json(500, {'erro': 'Vercel CLI não instalado. No terminal: npm i -g vercel (o token você salva na aba Configurações)'})
         vc = ler_config().get('vercel', {})
-        extra = ''
-        if vc.get('token'): extra += ' --token %s' % vc['token']
-        if vc.get('escopo'): extra += ' --scope %s' % vc['escopo']
+        cmd = [VERCEL_BIN, 'deploy', '--prod', '--yes']
+        if vc.get('token'): cmd += ['--token', vc['token']]
+        if vc.get('escopo'): cmd += ['--scope', vc['escopo']]
         shutil.copyfile(pagina, os.path.join(pasta, 'index.html'))
         with open(os.path.join(pasta, '.vercelignore'), 'w') as f:
             f.write('*-editor.html\noriginal.png\ncliente.json\n%s.html\n' % slug)
         try:
-            r = subprocess.run('vercel deploy --prod --yes' + extra, shell=True, cwd=pasta,
+            r = subprocess.run(cmd, shell=False, cwd=pasta,
                                capture_output=True, text=True, timeout=300)
         except subprocess.TimeoutExpired:
             return self._json(500, {'erro': 'deploy passou de 5 minutos — tente pelo terminal: vercel deploy --prod'})
@@ -122,14 +137,15 @@ class App(SimpleHTTPRequestHandler):
         O Claude pergunta no terminal o que faltar — o dashboard só dispara."""
         if not comando.startswith('/'):
             return self._json(400, {'erro': 'comando deve começar com /'})
-        if not shutil.which('claude'):
-            return self._json(500, {'erro': 'Claude Code CLI não encontrado no PATH'})
+        if not CLAUDE_BIN:
+            return self._json(500, {'erro': 'Claude Code não encontrado. Instale/verifique: claude no terminal (ou ~/.local/bin/claude)'})
         try:
             if os.name == 'nt':
-                subprocess.Popen('start "Prospector — %s" cmd /k claude "%s"' % (comando.split()[0], comando.replace('"', '')),
+                # /k mantém a janela; caminho absoluto do claude entre aspas para vencer PATH e espaços
+                subprocess.Popen('start "Prospector — %s" cmd /k ""%s" "%s""' % (comando.split()[0], CLAUDE_BIN, comando.replace('"', '')),
                                  shell=True, cwd=PASTA)
             else:
-                subprocess.Popen(['x-terminal-emulator', '-e', 'claude', comando], cwd=PASTA)
+                subprocess.Popen(['x-terminal-emulator', '-e', CLAUDE_BIN, comando], cwd=PASTA)
         except Exception as e:
             return self._json(500, {'erro': str(e)})
         return self._json(200, {'ok': True, 'msg': 'Terminal aberto com o Claude rodando %s — responda lá o que ele perguntar.' % comando.split()[0]})
@@ -139,15 +155,14 @@ class App(SimpleHTTPRequestHandler):
         -c continua a conversa anterior; acceptEdits deixa ele editar os sites (servidor é só localhost)."""
         if not msg:
             return self._json(400, {'erro': 'mensagem vazia'})
-        if not shutil.which('claude'):
-            return self._json(500, {'erro': 'Claude Code CLI não encontrado no PATH'})
-        base = 'claude -p --permission-mode acceptEdits --output-format json'
-        msg_arg = '"%s"' % msg.replace('"', "'")
+        if not CLAUDE_BIN:
+            return self._json(500, {'erro': 'Claude Code não encontrado. Instale/verifique: claude no terminal (ou ~/.local/bin/claude)'})
+        base = [CLAUDE_BIN, '-p', '--permission-mode', 'acceptEdits', '--output-format', 'json']
         try:
-            r = subprocess.run('%s -c %s' % (base, msg_arg), shell=True, cwd=PASTA,
+            r = subprocess.run(base + ['-c', msg], shell=False, cwd=PASTA,
                                capture_output=True, text=True, timeout=600, encoding='utf-8', errors='replace')
             if r.returncode != 0:  # primeira mensagem: ainda não existe conversa para continuar
-                r = subprocess.run('%s %s' % (base, msg_arg), shell=True, cwd=PASTA,
+                r = subprocess.run(base + [msg], shell=False, cwd=PASTA,
                                    capture_output=True, text=True, timeout=600, encoding='utf-8', errors='replace')
         except subprocess.TimeoutExpired:
             return self._json(500, {'erro': 'o Claude demorou mais de 10 min — para tarefas longas use a vista Ações (terminal)'})
