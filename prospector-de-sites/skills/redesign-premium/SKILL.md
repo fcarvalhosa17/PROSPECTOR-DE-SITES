@@ -98,6 +98,7 @@ Checklist de texto não substitui olho. Para cada página gerada, antes de marca
 - [ ] QA visual executado: screenshots em 375/768/1440 tirados, julgados e aprovados
 - [ ] Responsivo verificado em 360, 375, 768, 1024, 1280 e 1440px — zero rolagem horizontal e zero quebra em TODAS
 - [ ] Título e meta description preenchidos com nome + especialidade + cidade
+- [ ] JSON-LD `LocalBusiness` (ou subtipo do nicho) com dados reais do cliente em cada página; 1 só `h1` por página; `alt` em todas as fotos
 - [ ] Comparação com o original: todo conteúdo importante do site antigo está presente
 - [ ] TODAS as fotos utilizáveis de TODAS as páginas do original presentes no site novo (conferir contra a lista coletada na extração)
 - [ ] Paridade de páginas: cada página do original tem equivalente redesenhado (ou consolidação anotada) e a navegação entre elas funciona

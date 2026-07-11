@@ -9,7 +9,7 @@ Gere follow-ups educados para propostas paradas, seguindo a skill `proposta-emai
 
 1. **Verifique respostas ANTES**: rode a lógica do `/respostas` (busca no Gmail via conector) para não fazer follow-up de quem já respondeu — quem respondeu vira status `respondeu` e sai da lista.
 2. Selecione os elegíveis: leads com status `proposta`, data de envio há **3+ dias**, e SEM follow-up registrado (procure "follow-up" no campo `obs` do banco/`leads.md`). Se `$ARGUMENTS` indicar um cliente, restrinja a ele (mas respeite a regra de nunca repetir follow-up).
-3. Para cada elegível, escreva o follow-up — máximo 4 linhas, tom de quem lembra com gentileza, nunca cobra:
+3. Para cada elegível, escreva o follow-up (delegue ao agente `copy-engine` se disponível, com estas regras como mandato) — máximo 4 linhas, tom de quem lembra com gentileza, nunca cobra:
    - Referência leve ao primeiro e-mail ("te escrevi semana passada sobre o site").
    - Pergunta única: "conseguiu ver a página que preparei?" + o mesmo link da capa (único link).
    - Sem preço, sem urgência, sem "última chance". Passar pela checklist anti-spam da skill.
